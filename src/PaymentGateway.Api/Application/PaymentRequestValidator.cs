@@ -1,6 +1,6 @@
 using PaymentGateway.Api.Models.Requests;
 
-namespace PaymentGateway.Api.Services;
+namespace PaymentGateway.Api.Application;
 
 public class PaymentRequestValidator : IPaymentRequestValidator
 {
