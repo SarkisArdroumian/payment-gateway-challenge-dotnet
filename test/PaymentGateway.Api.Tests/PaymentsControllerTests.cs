@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 using PaymentGateway.Api.Controllers;
+using PaymentGateway.Api.Models;
 using PaymentGateway.Api.Models.Responses;
 using PaymentGateway.Api.Services;
 
@@ -20,6 +21,7 @@ public class PaymentsControllerTests
         var payment = new PostPaymentResponse
         {
             Id = Guid.NewGuid(),
+            Status = PaymentStatus.Authorized,
             ExpiryYear = _random.Next(2023, 2030),
             ExpiryMonth = _random.Next(1, 12),
             Amount = _random.Next(1, 10000),
@@ -38,11 +40,18 @@ public class PaymentsControllerTests
 
         // Act
         var response = await client.GetAsync($"/api/Payments/{payment.Id}");
-        var paymentResponse = await response.Content.ReadFromJsonAsync<PostPaymentResponse>();
+        var paymentResponse = await response.Content.ReadFromJsonAsync<GetPaymentResponse>();
         
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(paymentResponse);
+        Assert.Equal(payment.Id, paymentResponse.Id);
+        Assert.Equal(payment.Status, paymentResponse.Status);
+        Assert.Equal(payment.CardNumberLastFour.ToString("D4"), paymentResponse.LastFour);
+        Assert.Equal(payment.ExpiryMonth, paymentResponse.ExpiryMonth);
+        Assert.Equal(payment.ExpiryYear, paymentResponse.ExpiryYear);
+        Assert.Equal(payment.Currency, paymentResponse.Currency);
+        Assert.Equal(payment.Amount, paymentResponse.Amount);
     }
 
     [Fact]

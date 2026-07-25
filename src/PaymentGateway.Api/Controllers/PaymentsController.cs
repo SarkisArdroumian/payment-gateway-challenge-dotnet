@@ -17,10 +17,24 @@ public class PaymentsController : Controller
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<PostPaymentResponse?>> GetPaymentAsync(Guid id)
+    public ActionResult<GetPaymentResponse> GetPaymentAsync(Guid id)
     {
         var payment = _paymentsRepository.Get(id);
 
-        return new OkObjectResult(payment);
+        if (payment is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new GetPaymentResponse
+        {
+            Id = payment.Id,
+            Status = payment.Status,
+            LastFour = payment.CardNumberLastFour.ToString("D4"),
+            ExpiryMonth = payment.ExpiryMonth,
+            ExpiryYear = payment.ExpiryYear,
+            Currency = payment.Currency,
+            Amount = payment.Amount
+        });
     }
 }
