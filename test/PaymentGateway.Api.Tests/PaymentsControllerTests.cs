@@ -18,18 +18,18 @@ public class PaymentsControllerTests
     public async Task RetrievesAPaymentSuccessfully()
     {
         // Arrange
-        var payment = new PostPaymentResponse
+        var payment = new Payment
         {
             Id = Guid.NewGuid(),
             Status = PaymentStatus.Authorized,
             ExpiryYear = _random.Next(2023, 2030),
             ExpiryMonth = _random.Next(1, 12),
             Amount = _random.Next(1, 10000),
-            CardNumberLastFour = _random.Next(1111, 9999),
+            LastFour = _random.Next(1111, 9999).ToString(),
             Currency = "GBP"
         };
 
-        var paymentsRepository = new PaymentsRepository();
+        IPaymentsRepository paymentsRepository = new PaymentsRepository();
         paymentsRepository.Add(payment);
 
         var webApplicationFactory = new WebApplicationFactory<PaymentsController>();
@@ -47,7 +47,7 @@ public class PaymentsControllerTests
         Assert.NotNull(paymentResponse);
         Assert.Equal(payment.Id, paymentResponse.Id);
         Assert.Equal(payment.Status, paymentResponse.Status);
-        Assert.Equal(payment.CardNumberLastFour.ToString("D4"), paymentResponse.LastFour);
+        Assert.Equal(payment.LastFour, paymentResponse.LastFour);
         Assert.Equal(payment.ExpiryMonth, paymentResponse.ExpiryMonth);
         Assert.Equal(payment.ExpiryYear, paymentResponse.ExpiryYear);
         Assert.Equal(payment.Currency, paymentResponse.Currency);

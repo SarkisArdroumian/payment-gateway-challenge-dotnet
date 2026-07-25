@@ -9,9 +9,9 @@ namespace PaymentGateway.Api.Controllers;
 [ApiController]
 public class PaymentsController : Controller
 {
-    private readonly PaymentsRepository _paymentsRepository;
+    private readonly IPaymentsRepository _paymentsRepository;
 
-    public PaymentsController(PaymentsRepository paymentsRepository)
+    public PaymentsController(IPaymentsRepository paymentsRepository)
     {
         _paymentsRepository = paymentsRepository;
     }
@@ -30,7 +30,7 @@ public class PaymentsController : Controller
         {
             Id = payment.Id,
             Status = payment.Status,
-            LastFour = payment.CardNumberLastFour.ToString("D4"),
+            LastFour = payment.LastFour,
             ExpiryMonth = payment.ExpiryMonth,
             ExpiryYear = payment.ExpiryYear,
             Currency = payment.Currency,
