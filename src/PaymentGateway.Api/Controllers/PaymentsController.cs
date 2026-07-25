@@ -3,7 +3,6 @@
 using PaymentGateway.Api.Application;
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Models.Responses;
-using PaymentGateway.Api.Infrastructure.Banking;
 
 namespace PaymentGateway.Api.Controllers;
 
@@ -34,29 +33,18 @@ public class PaymentsController : Controller
                 error => error.Value)));
         }
 
-        try
-        {
-            var payment = await _paymentService.ProcessPaymentAsync(request, cancellationToken);
+        var payment = await _paymentService.ProcessPaymentAsync(request, cancellationToken);
 
-            return Ok(new PostPaymentResponse
-            {
-                Id = payment.Id,
-                Status = payment.Status,
-                LastFour = payment.LastFour,
-                ExpiryMonth = payment.ExpiryMonth,
-                ExpiryYear = payment.ExpiryYear,
-                Currency = payment.Currency,
-                Amount = payment.Amount
-            });
-        }
-        catch (AcquiringBankUnavailableException)
+        return Ok(new PostPaymentResponse
         {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
-            {
-                Title = "Acquiring bank unavailable",
-                Status = StatusCodes.Status503ServiceUnavailable
-            });
-        }
+            Id = payment.Id,
+            Status = payment.Status,
+            LastFour = payment.LastFour,
+            ExpiryMonth = payment.ExpiryMonth,
+            ExpiryYear = payment.ExpiryYear,
+            Currency = payment.Currency,
+            Amount = payment.Amount
+        });
     }
 
     [HttpGet("{id:guid}")]

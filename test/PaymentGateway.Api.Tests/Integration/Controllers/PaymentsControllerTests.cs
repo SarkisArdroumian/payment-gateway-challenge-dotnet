@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -70,8 +71,25 @@ public class PaymentsControllerTests
         var request = CreateValidRequest(cardNumber: "42424242424240");
 
         var response = await client.PostAsJsonAsync("/api/Payments", request);
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.NotNull(problemDetails);
+        Assert.Equal("Acquiring bank unavailable", problemDetails.Title);
+    }
+
+    [Fact]
+    public async Task Returns500ForUnexpectedFailure()
+    {
+        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(static (_, _) => throw new InvalidOperationException("Unexpected failure")));
+        var request = CreateValidRequest();
+
+        var response = await client.PostAsJsonAsync("/api/Payments", request);
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotNull(problemDetails);
+        Assert.Equal("An unexpected error occurred", problemDetails.Title);
     }
 
     [Fact]
