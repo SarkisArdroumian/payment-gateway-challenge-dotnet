@@ -10,6 +10,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<IPaymentsRepository, PaymentsRepository>();
+builder.Services.AddSingleton<IPaymentRequestValidator, PaymentRequestValidator>();
 
 var app = builder.Build();
 
