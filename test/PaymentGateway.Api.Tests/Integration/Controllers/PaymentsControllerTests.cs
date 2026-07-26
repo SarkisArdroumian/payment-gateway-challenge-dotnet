@@ -88,6 +88,8 @@ public class PaymentsControllerTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.NotNull(problemDetails);
         Assert.Equal("Acquiring bank unavailable", problemDetails.Title);
+        Assert.True(problemDetails.Extensions.TryGetValue("traceId", out var traceId));
+        Assert.False(string.IsNullOrWhiteSpace(traceId?.ToString()));
     }
 
     [Fact]
@@ -102,6 +104,8 @@ public class PaymentsControllerTests
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.NotNull(problemDetails);
         Assert.Equal("An unexpected error occurred", problemDetails.Title);
+        Assert.True(problemDetails.Extensions.TryGetValue("traceId", out var traceId));
+        Assert.False(string.IsNullOrWhiteSpace(traceId?.ToString()));
     }
 
     [Fact]

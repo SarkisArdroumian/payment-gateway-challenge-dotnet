@@ -17,6 +17,8 @@ public class GlobalExceptionHandler : IExceptionHandler
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        var traceId = httpContext.TraceIdentifier;
+
         var problemDetails = exception switch
         {
             AcquiringBankUnavailableException => new ProblemDetails
@@ -31,13 +33,15 @@ public class GlobalExceptionHandler : IExceptionHandler
             }
         };
 
+        problemDetails.Extensions["traceId"] = traceId;
+
         _logger.LogError(
             exception,
             "Handling exception for request {Method} {Path}. Responding with status code {StatusCode}. TraceId: {TraceId}",
             httpContext.Request.Method,
             httpContext.Request.Path,
             problemDetails.Status ?? StatusCodes.Status500InternalServerError,
-            httpContext.TraceIdentifier);
+            traceId);
 
         httpContext.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
         httpContext.Response.ContentType = "application/problem+json";
