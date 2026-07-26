@@ -4,6 +4,7 @@ public class Payment
 {
     public Guid Id { get; set; }
     public PaymentStatus Status { get; set; }
+    public string AuthorizationCode { get; set; } = string.Empty;
     public string LastFour { get; set; } = string.Empty;
     public int ExpiryMonth { get; set; }
     public int ExpiryYear { get; set; }

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 using PaymentGateway.Api.Application.Abstractions;
+using PaymentGateway.Api.Application.Payments;
 using PaymentGateway.Api.Application.Payments.Commands;
 using PaymentGateway.Api.Controllers;
 using PaymentGateway.Api.Contracts.Requests;
@@ -22,7 +23,11 @@ public class PaymentsControllerTests
     [Fact]
     public async Task ProcessesAuthorizedPaymentSuccessfully()
     {
-        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(PaymentStatus.Authorized));
+        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(new AcquiringBankPaymentResult
+        {
+            Status = PaymentStatus.Authorized,
+            AuthorizationCode = "auth-4241"
+        }));
         var request = CreateValidRequest(cardNumber: "42424242424241");
 
         var response = await client.PostAsJsonAsync("/api/Payments", request);
@@ -31,6 +36,7 @@ public class PaymentsControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(paymentResponse);
         Assert.Equal(PaymentStatus.Authorized, paymentResponse.Status);
+        Assert.Equal("auth-4241", paymentResponse.AuthorizationCode);
         Assert.Equal("4241", paymentResponse.LastFour);
         Assert.Equal(request.ExpiryMonth, paymentResponse.ExpiryMonth);
         Assert.Equal(request.ExpiryYear, paymentResponse.ExpiryYear);
@@ -41,7 +47,11 @@ public class PaymentsControllerTests
     [Fact]
     public async Task ProcessesDeclinedPaymentSuccessfully()
     {
-        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(PaymentStatus.Declined));
+        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(new AcquiringBankPaymentResult
+        {
+            Status = PaymentStatus.Declined,
+            AuthorizationCode = string.Empty
+        }));
         var request = CreateValidRequest(cardNumber: "42424242424242");
 
         var response = await client.PostAsJsonAsync("/api/Payments", request);
@@ -50,6 +60,7 @@ public class PaymentsControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(paymentResponse);
         Assert.Equal(PaymentStatus.Declined, paymentResponse.Status);
+        Assert.Equal(string.Empty, paymentResponse.AuthorizationCode);
         Assert.Equal("4242", paymentResponse.LastFour);
     }
 
@@ -96,7 +107,11 @@ public class PaymentsControllerTests
     [Fact]
     public async Task RetrievesProcessedPaymentSuccessfully()
     {
-        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(PaymentStatus.Authorized));
+        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(new AcquiringBankPaymentResult
+        {
+            Status = PaymentStatus.Authorized,
+            AuthorizationCode = "auth-processed"
+        }));
         var request = CreateValidRequest(cardNumber: "42424242424241");
 
         var postResponse = await client.PostAsJsonAsync("/api/Payments", request);
@@ -109,6 +124,7 @@ public class PaymentsControllerTests
         Assert.NotNull(paymentResponse);
         Assert.Equal(createdPayment.Id, paymentResponse.Id);
         Assert.Equal(createdPayment.Status, paymentResponse.Status);
+        Assert.Equal(createdPayment.AuthorizationCode, paymentResponse.AuthorizationCode);
         Assert.Equal(createdPayment.LastFour, paymentResponse.LastFour);
         Assert.Equal(createdPayment.ExpiryMonth, paymentResponse.ExpiryMonth);
         Assert.Equal(createdPayment.ExpiryYear, paymentResponse.ExpiryYear);
@@ -124,6 +140,7 @@ public class PaymentsControllerTests
         {
             Id = Guid.NewGuid(),
             Status = PaymentStatus.Authorized,
+            AuthorizationCode = "auth-existing",
             ExpiryYear = _random.Next(2023, 2030),
             ExpiryMonth = _random.Next(1, 12),
             Amount = _random.Next(1, 10000),
@@ -145,6 +162,7 @@ public class PaymentsControllerTests
         Assert.NotNull(paymentResponse);
         Assert.Equal(payment.Id, paymentResponse.Id);
         Assert.Equal(payment.Status, paymentResponse.Status);
+        Assert.Equal(payment.AuthorizationCode, paymentResponse.AuthorizationCode);
         Assert.Equal(payment.LastFour, paymentResponse.LastFour);
         Assert.Equal(payment.ExpiryMonth, paymentResponse.ExpiryMonth);
         Assert.Equal(payment.ExpiryYear, paymentResponse.ExpiryYear);
@@ -204,19 +222,19 @@ public class PaymentsControllerTests
 
     private sealed class FakeAcquiringBankClient : IAcquiringBankClient
     {
-        private readonly Func<ProcessPaymentCommand, CancellationToken, Task<PaymentStatus>> _processPayment;
+        private readonly Func<ProcessPaymentCommand, CancellationToken, Task<AcquiringBankPaymentResult>> _processPayment;
 
-        public FakeAcquiringBankClient(PaymentStatus status)
-            : this((_, _) => Task.FromResult(status))
+        public FakeAcquiringBankClient(AcquiringBankPaymentResult result)
+            : this((_, _) => Task.FromResult(result))
         {
         }
 
-        public FakeAcquiringBankClient(Func<ProcessPaymentCommand, CancellationToken, Task<PaymentStatus>> processPayment)
+        public FakeAcquiringBankClient(Func<ProcessPaymentCommand, CancellationToken, Task<AcquiringBankPaymentResult>> processPayment)
         {
             _processPayment = processPayment;
         }
 
-        public Task<PaymentStatus> ProcessPaymentAsync(ProcessPaymentCommand command, CancellationToken cancellationToken = default)
+        public Task<AcquiringBankPaymentResult> ProcessPaymentAsync(ProcessPaymentCommand command, CancellationToken cancellationToken = default)
         {
             return _processPayment(command, cancellationToken);
         }

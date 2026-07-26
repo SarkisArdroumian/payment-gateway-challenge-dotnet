@@ -73,6 +73,7 @@ public class PaymentsController : Controller
         {
             Id = payment.Id,
             Status = payment.Status,
+            AuthorizationCode = payment.AuthorizationCode,
             LastFour = payment.LastFour,
             ExpiryMonth = payment.ExpiryMonth,
             ExpiryYear = payment.ExpiryYear,
@@ -103,6 +104,7 @@ public class PaymentsController : Controller
         {
             Id = payment.Id,
             Status = payment.Status,
+            AuthorizationCode = payment.AuthorizationCode,
             LastFour = payment.LastFour,
             ExpiryMonth = payment.ExpiryMonth,
             ExpiryYear = payment.ExpiryYear,

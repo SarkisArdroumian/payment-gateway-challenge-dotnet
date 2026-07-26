@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using PaymentGateway.Api.Application.Payments;
 using PaymentGateway.Api.Application.Payments.Commands;
 using PaymentGateway.Api.Infrastructure.Banking;
 using PaymentGateway.Api.Domain;
@@ -14,6 +15,7 @@ public class AcquiringBankSimulatorClientTests
     public async Task SendsExpectedRequestAndMapsAuthorizedResponse()
     {
         HttpRequestMessage? capturedRequest = null;
+        var authorizationCode = Guid.NewGuid().ToString();
         var handler = new StubHttpMessageHandler(request =>
         {
             capturedRequest = request;
@@ -22,7 +24,7 @@ public class AcquiringBankSimulatorClientTests
                 Content = JsonContent.Create(new
                 {
                     authorized = true,
-                    authorization_code = Guid.NewGuid().ToString()
+                    authorization_code = authorizationCode
                 })
             };
         });
@@ -38,7 +40,8 @@ public class AcquiringBankSimulatorClientTests
             Cvv = "123"
         });
 
-        Assert.Equal(PaymentStatus.Authorized, result);
+        Assert.Equal(PaymentStatus.Authorized, result.Status);
+        Assert.Equal(authorizationCode, result.AuthorizationCode);
         Assert.NotNull(capturedRequest);
         Assert.Equal(HttpMethod.Post, capturedRequest.Method);
         Assert.Equal(new Uri("http://localhost:8080/payments"), capturedRequest.RequestUri);
@@ -66,7 +69,8 @@ public class AcquiringBankSimulatorClientTests
 
         var result = await client.ProcessPaymentAsync(CreateRequest());
 
-        Assert.Equal(PaymentStatus.Declined, result);
+        Assert.Equal(PaymentStatus.Declined, result.Status);
+        Assert.Equal(string.Empty, result.AuthorizationCode);
     }
 
     [Fact]

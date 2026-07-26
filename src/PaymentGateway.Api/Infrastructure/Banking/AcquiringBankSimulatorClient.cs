@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 
 using PaymentGateway.Api.Application.Abstractions;
+using PaymentGateway.Api.Application.Payments;
 using PaymentGateway.Api.Application.Payments.Commands;
 using PaymentGateway.Api.Domain;
 
@@ -14,7 +15,7 @@ public class AcquiringBankSimulatorClient(HttpClient httpClient, ILogger<Acquiri
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<AcquiringBankSimulatorClient> _logger = logger;
 
-    public async Task<PaymentStatus> ProcessPaymentAsync(ProcessPaymentCommand command, CancellationToken cancellationToken = default)
+    public async Task<AcquiringBankPaymentResult> ProcessPaymentAsync(ProcessPaymentCommand command, CancellationToken cancellationToken = default)
     {
         var lastFour = command.CardNumber[^4..];
         var normalizedCurrency = command.Currency.Trim().ToUpperInvariant();
@@ -61,7 +62,11 @@ public class AcquiringBankSimulatorClient(HttpClient httpClient, ILogger<Acquiri
             paymentStatus,
             lastFour);
 
-        return paymentStatus;
+        return new AcquiringBankPaymentResult
+        {
+            Status = paymentStatus,
+            AuthorizationCode = bankResponse.AuthorizationCode
+        };
     }
 
     private sealed class BankPaymentRequest
@@ -86,5 +91,8 @@ public class AcquiringBankSimulatorClient(HttpClient httpClient, ILogger<Acquiri
     {
         [JsonPropertyName("authorized")]
         public bool Authorized { get; set; }
+
+        [JsonPropertyName("authorization_code")]
+        public string AuthorizationCode { get; set; } = string.Empty;
     }
 }

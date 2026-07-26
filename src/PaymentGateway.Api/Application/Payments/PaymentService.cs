@@ -52,12 +52,13 @@ public class PaymentService : IPaymentService
             normalizedCurrency,
             lastFour);
 
-        var status = await _acquiringBankClient.ProcessPaymentAsync(command, cancellationToken);
+        var bankPaymentResult = await _acquiringBankClient.ProcessPaymentAsync(command, cancellationToken);
 
         var payment = new Payment
         {
             Id = Guid.NewGuid(),
-            Status = status,
+            Status = bankPaymentResult.Status,
+            AuthorizationCode = bankPaymentResult.AuthorizationCode,
             LastFour = lastFour,
             ExpiryMonth = command.ExpiryMonth,
             ExpiryYear = command.ExpiryYear,
@@ -68,10 +69,11 @@ public class PaymentService : IPaymentService
         _paymentsRepository.Add(payment);
 
         _logger.LogInformation(
-            "Payment {PaymentId} stored with status {Status} for card ending {LastFour}.",
+            "Payment {PaymentId} stored with status {Status} for card ending {LastFour}. Authorization code present: {HasAuthorizationCode}.",
             payment.Id,
             payment.Status,
-            payment.LastFour);
+            payment.LastFour,
+            !string.IsNullOrWhiteSpace(payment.AuthorizationCode));
 
         return payment;
     }
