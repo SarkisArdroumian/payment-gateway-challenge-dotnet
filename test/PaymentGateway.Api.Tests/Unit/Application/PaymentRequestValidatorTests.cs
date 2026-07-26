@@ -1,5 +1,5 @@
-using PaymentGateway.Api.Models.Requests;
-using PaymentGateway.Api.Application;
+using PaymentGateway.Api.Application.Payments;
+using PaymentGateway.Api.Application.Payments.Commands;
 
 namespace PaymentGateway.Api.Tests;
 
@@ -27,7 +27,7 @@ public class PaymentRequestValidatorTests
         var result = _validator.Validate(request);
 
         Assert.False(result.IsValid);
-        Assert.Contains(nameof(PostPaymentRequest.CardNumber), result.Errors.Keys);
+        Assert.Contains(nameof(ProcessPaymentCommand.CardNumber), result.Errors.Keys);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class PaymentRequestValidatorTests
         var result = _validator.Validate(request);
 
         Assert.False(result.IsValid);
-        Assert.Contains(nameof(PostPaymentRequest.ExpiryYear), result.Errors.Keys);
+        Assert.Contains(nameof(ProcessPaymentCommand.ExpiryYear), result.Errors.Keys);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class PaymentRequestValidatorTests
         var result = _validator.Validate(request);
 
         Assert.False(result.IsValid);
-        Assert.Contains(nameof(PostPaymentRequest.Currency), result.Errors.Keys);
+        Assert.Contains(nameof(ProcessPaymentCommand.Currency), result.Errors.Keys);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class PaymentRequestValidatorTests
         var result = _validator.Validate(request);
 
         Assert.False(result.IsValid);
-        Assert.Contains(nameof(PostPaymentRequest.Amount), result.Errors.Keys);
+        Assert.Contains(nameof(ProcessPaymentCommand.Amount), result.Errors.Keys);
     }
 
     [Fact]
@@ -77,14 +77,14 @@ public class PaymentRequestValidatorTests
         var result = _validator.Validate(request);
 
         Assert.False(result.IsValid);
-        Assert.Contains(nameof(PostPaymentRequest.Cvv), result.Errors.Keys);
+        Assert.Contains(nameof(ProcessPaymentCommand.Cvv), result.Errors.Keys);
     }
 
-    private static PostPaymentRequest CreateValidRequest()
+    private static ProcessPaymentCommand CreateValidRequest()
     {
         var expiryDate = DateTime.UtcNow.AddMonths(1);
 
-        return new PostPaymentRequest
+        return new ProcessPaymentCommand
         {
             CardNumber = "42424242424242",
             ExpiryMonth = expiryDate.Month,

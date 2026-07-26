@@ -2,9 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-using PaymentGateway.Api.Application;
+using PaymentGateway.Api.Application.Abstractions;
+using PaymentGateway.Api.Application.Payments.Commands;
 using PaymentGateway.Api.Domain;
-using PaymentGateway.Api.Models.Requests;
 
 namespace PaymentGateway.Api.Infrastructure.Banking;
 
@@ -12,17 +12,17 @@ public class AcquiringBankSimulatorClient(HttpClient httpClient) : IAcquiringBan
 {
     private readonly HttpClient _httpClient = httpClient;
 
-    public async Task<PaymentStatus> ProcessPaymentAsync(PostPaymentRequest request, CancellationToken cancellationToken = default)
+    public async Task<PaymentStatus> ProcessPaymentAsync(ProcessPaymentCommand command, CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.PostAsJsonAsync(
             "payments",
             new BankPaymentRequest
             {
-                CardNumber = request.CardNumber,
-                ExpiryDate = $"{request.ExpiryMonth:D2}/{request.ExpiryYear:D4}",
-                Currency = request.Currency,
-                Amount = request.Amount,
-                Cvv = request.Cvv
+                CardNumber = command.CardNumber,
+                ExpiryDate = $"{command.ExpiryMonth:D2}/{command.ExpiryYear:D4}",
+                Currency = command.Currency,
+                Amount = command.Amount,
+                Cvv = command.Cvv
             },
             cancellationToken);
 

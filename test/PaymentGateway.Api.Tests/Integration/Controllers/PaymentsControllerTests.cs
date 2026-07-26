@@ -4,11 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
-using PaymentGateway.Api.Application;
+using PaymentGateway.Api.Application.Abstractions;
+using PaymentGateway.Api.Application.Payments.Commands;
 using PaymentGateway.Api.Controllers;
+using PaymentGateway.Api.Contracts.Requests;
+using PaymentGateway.Api.Contracts.Responses;
 using PaymentGateway.Api.Domain;
-using PaymentGateway.Api.Models.Requests;
-using PaymentGateway.Api.Models.Responses;
 using PaymentGateway.Api.Infrastructure.Banking;
 using PaymentGateway.Api.Infrastructure.Persistence;
 
@@ -203,21 +204,21 @@ public class PaymentsControllerTests
 
     private sealed class FakeAcquiringBankClient : IAcquiringBankClient
     {
-        private readonly Func<PostPaymentRequest, CancellationToken, Task<PaymentStatus>> _processPayment;
+        private readonly Func<ProcessPaymentCommand, CancellationToken, Task<PaymentStatus>> _processPayment;
 
         public FakeAcquiringBankClient(PaymentStatus status)
             : this((_, _) => Task.FromResult(status))
         {
         }
 
-        public FakeAcquiringBankClient(Func<PostPaymentRequest, CancellationToken, Task<PaymentStatus>> processPayment)
+        public FakeAcquiringBankClient(Func<ProcessPaymentCommand, CancellationToken, Task<PaymentStatus>> processPayment)
         {
             _processPayment = processPayment;
         }
 
-        public Task<PaymentStatus> ProcessPaymentAsync(PostPaymentRequest request, CancellationToken cancellationToken = default)
+        public Task<PaymentStatus> ProcessPaymentAsync(ProcessPaymentCommand command, CancellationToken cancellationToken = default)
         {
-            return _processPayment(request, cancellationToken);
+            return _processPayment(command, cancellationToken);
         }
     }
 }

@@ -1,20 +1,21 @@
-using PaymentGateway.Api.Models.Requests;
+using PaymentGateway.Api.Application.Abstractions;
+using PaymentGateway.Api.Application.Payments.Commands;
 
-namespace PaymentGateway.Api.Application;
+namespace PaymentGateway.Api.Application.Payments;
 
 public class PaymentRequestValidator : IPaymentRequestValidator
 {
     private static readonly HashSet<string> SupportedCurrencies = ["USD", "EUR", "GBP"];
 
-    public PaymentValidationResult Validate(PostPaymentRequest request)
+    public PaymentValidationResult Validate(ProcessPaymentCommand command)
     {
         Dictionary<string, List<string>> errors = new();
 
-        ValidateCardNumber(request.CardNumber, errors);
-        ValidateExpiryDate(request.ExpiryMonth, request.ExpiryYear, errors);
-        ValidateCurrency(request.Currency, errors);
-        ValidateAmount(request.Amount, errors);
-        ValidateCvv(request.Cvv, errors);
+        ValidateCardNumber(command.CardNumber, errors);
+        ValidateExpiryDate(command.ExpiryMonth, command.ExpiryYear, errors);
+        ValidateCurrency(command.Currency, errors);
+        ValidateAmount(command.Amount, errors);
+        ValidateCvv(command.Cvv, errors);
 
         return new PaymentValidationResult
         {
@@ -28,18 +29,18 @@ public class PaymentRequestValidator : IPaymentRequestValidator
     {
         if (string.IsNullOrWhiteSpace(cardNumber))
         {
-            AddError(errors, nameof(PostPaymentRequest.CardNumber), "Card number is required.");
+            AddError(errors, nameof(ProcessPaymentCommand.CardNumber), "Card number is required.");
             return;
         }
 
         if (!cardNumber.All(char.IsDigit))
         {
-            AddError(errors, nameof(PostPaymentRequest.CardNumber), "Card number must contain only digits.");
+            AddError(errors, nameof(ProcessPaymentCommand.CardNumber), "Card number must contain only digits.");
         }
 
         if (cardNumber.Length < 14 || cardNumber.Length > 19)
         {
-            AddError(errors, nameof(PostPaymentRequest.CardNumber), "Card number must be between 14 and 19 digits.");
+            AddError(errors, nameof(ProcessPaymentCommand.CardNumber), "Card number must be between 14 and 19 digits.");
         }
     }
 
@@ -47,13 +48,13 @@ public class PaymentRequestValidator : IPaymentRequestValidator
     {
         if (expiryMonth < 1 || expiryMonth > 12)
         {
-            AddError(errors, nameof(PostPaymentRequest.ExpiryMonth), "Expiry month must be between 1 and 12.");
+            AddError(errors, nameof(ProcessPaymentCommand.ExpiryMonth), "Expiry month must be between 1 and 12.");
             return;
         }
 
         if (expiryYear < 1)
         {
-            AddError(errors, nameof(PostPaymentRequest.ExpiryYear), "Expiry year must be greater than zero.");
+            AddError(errors, nameof(ProcessPaymentCommand.ExpiryYear), "Expiry year must be greater than zero.");
             return;
         }
 
@@ -62,7 +63,7 @@ public class PaymentRequestValidator : IPaymentRequestValidator
 
         if (lastValidDate.Date < now.Date)
         {
-            AddError(errors, nameof(PostPaymentRequest.ExpiryYear), "Expiry date must not be in the past.");
+            AddError(errors, nameof(ProcessPaymentCommand.ExpiryYear), "Expiry date must not be in the past.");
         }
     }
 
@@ -70,13 +71,13 @@ public class PaymentRequestValidator : IPaymentRequestValidator
     {
         if (string.IsNullOrWhiteSpace(currency))
         {
-            AddError(errors, nameof(PostPaymentRequest.Currency), "Currency is required.");
+            AddError(errors, nameof(ProcessPaymentCommand.Currency), "Currency is required.");
             return;
         }
 
         if (!SupportedCurrencies.Contains(currency.Trim().ToUpperInvariant()))
         {
-            AddError(errors, nameof(PostPaymentRequest.Currency), "Currency must be one of USD, EUR or GBP.");
+            AddError(errors, nameof(ProcessPaymentCommand.Currency), "Currency must be one of USD, EUR or GBP.");
         }
     }
 
@@ -84,7 +85,7 @@ public class PaymentRequestValidator : IPaymentRequestValidator
     {
         if (amount <= 0)
         {
-            AddError(errors, nameof(PostPaymentRequest.Amount), "Amount must be greater than zero.");
+            AddError(errors, nameof(ProcessPaymentCommand.Amount), "Amount must be greater than zero.");
         }
     }
 
@@ -92,18 +93,18 @@ public class PaymentRequestValidator : IPaymentRequestValidator
     {
         if (string.IsNullOrWhiteSpace(cvv))
         {
-            AddError(errors, nameof(PostPaymentRequest.Cvv), "CVV is required.");
+            AddError(errors, nameof(ProcessPaymentCommand.Cvv), "CVV is required.");
             return;
         }
 
         if (!cvv.All(char.IsDigit))
         {
-            AddError(errors, nameof(PostPaymentRequest.Cvv), "CVV must contain only digits.");
+            AddError(errors, nameof(ProcessPaymentCommand.Cvv), "CVV must contain only digits.");
         }
 
         if (cvv.Length is < 3 or > 4)
         {
-            AddError(errors, nameof(PostPaymentRequest.Cvv), "CVV must be 3 or 4 digits.");
+            AddError(errors, nameof(ProcessPaymentCommand.Cvv), "CVV must be 3 or 4 digits.");
         }
     }
 

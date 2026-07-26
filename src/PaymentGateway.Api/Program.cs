@@ -1,4 +1,5 @@
-using PaymentGateway.Api.Application;
+using PaymentGateway.Api.Application.Abstractions;
+using PaymentGateway.Api.Application.Payments;
 using PaymentGateway.Api.ExceptionHandling;
 using PaymentGateway.Api.Infrastructure.Banking;
 using PaymentGateway.Api.Infrastructure.Persistence;

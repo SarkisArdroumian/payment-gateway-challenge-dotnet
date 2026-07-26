@@ -1,10 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 
-using PaymentGateway.Api.Domain;
-using PaymentGateway.Api.Application;
-using PaymentGateway.Api.Models.Requests;
+using PaymentGateway.Api.Application.Payments.Commands;
 using PaymentGateway.Api.Infrastructure.Banking;
+using PaymentGateway.Api.Domain;
 
 namespace PaymentGateway.Api.Tests;
 
@@ -28,7 +27,7 @@ public class AcquiringBankSimulatorClientTests
         });
         var client = CreateClient(handler);
 
-        var result = await client.ProcessPaymentAsync(new PostPaymentRequest
+        var result = await client.ProcessPaymentAsync(new ProcessPaymentCommand
         {
             CardNumber = "42424242424241",
             ExpiryMonth = 12,
@@ -86,9 +85,9 @@ public class AcquiringBankSimulatorClientTests
         });
     }
 
-    private static PostPaymentRequest CreateRequest()
+    private static ProcessPaymentCommand CreateRequest()
     {
-        return new PostPaymentRequest
+        return new ProcessPaymentCommand
         {
             CardNumber = "42424242424242",
             ExpiryMonth = 12,

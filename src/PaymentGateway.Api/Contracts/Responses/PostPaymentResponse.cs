@@ -1,8 +1,8 @@
-﻿using PaymentGateway.Api.Domain;
+using PaymentGateway.Api.Domain;
 
-namespace PaymentGateway.Api.Models.Responses;
+namespace PaymentGateway.Api.Contracts.Responses;
 
-public class GetPaymentResponse
+public class PostPaymentResponse
 {
     public Guid Id { get; set; }
     public PaymentStatus Status { get; set; }

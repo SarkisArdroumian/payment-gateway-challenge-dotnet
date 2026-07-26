@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-using PaymentGateway.Api.Application;
+using PaymentGateway.Api.Application.Abstractions;
 using PaymentGateway.Api.Domain;
 
 namespace PaymentGateway.Api.Infrastructure.Persistence;
