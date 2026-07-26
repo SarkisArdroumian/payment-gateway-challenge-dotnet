@@ -1,12 +1,20 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using PaymentGateway.Api.Infrastructure.Banking;
 
 namespace PaymentGateway.Api.ExceptionHandling;
 
 public class GlobalExceptionHandler : IExceptionHandler
 {
+    private readonly ILogger<GlobalExceptionHandler> _logger;
+
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+    {
+        _logger = logger;
+    }
+
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var problemDetails = exception switch
@@ -22,6 +30,14 @@ public class GlobalExceptionHandler : IExceptionHandler
                 Status = StatusCodes.Status500InternalServerError
             }
         };
+
+        _logger.LogError(
+            exception,
+            "Handling exception for request {Method} {Path}. Responding with status code {StatusCode}. TraceId: {TraceId}",
+            httpContext.Request.Method,
+            httpContext.Request.Path,
+            problemDetails.Status ?? StatusCodes.Status500InternalServerError,
+            httpContext.TraceIdentifier);
 
         httpContext.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
         httpContext.Response.ContentType = "application/problem+json";

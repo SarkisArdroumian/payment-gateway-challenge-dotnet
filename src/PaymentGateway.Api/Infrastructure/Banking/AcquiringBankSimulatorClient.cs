@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 using PaymentGateway.Api.Application.Abstractions;
 using PaymentGateway.Api.Application.Payments.Commands;
@@ -8,12 +9,22 @@ using PaymentGateway.Api.Domain;
 
 namespace PaymentGateway.Api.Infrastructure.Banking;
 
-public class AcquiringBankSimulatorClient(HttpClient httpClient) : IAcquiringBankClient
+public class AcquiringBankSimulatorClient(HttpClient httpClient, ILogger<AcquiringBankSimulatorClient> logger) : IAcquiringBankClient
 {
     private readonly HttpClient _httpClient = httpClient;
+    private readonly ILogger<AcquiringBankSimulatorClient> _logger = logger;
 
     public async Task<PaymentStatus> ProcessPaymentAsync(ProcessPaymentCommand command, CancellationToken cancellationToken = default)
     {
+        var lastFour = command.CardNumber[^4..];
+        var normalizedCurrency = command.Currency.Trim().ToUpperInvariant();
+
+        _logger.LogInformation(
+            "Sending payment request to acquiring bank for amount {Amount} {Currency} with card ending {LastFour}.",
+            command.Amount,
+            normalizedCurrency,
+            lastFour);
+
         using var response = await _httpClient.PostAsJsonAsync(
             "payments",
             new BankPaymentRequest
@@ -28,6 +39,11 @@ public class AcquiringBankSimulatorClient(HttpClient httpClient) : IAcquiringBan
 
         if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
         {
+            _logger.LogWarning(
+                "Acquiring bank returned status code {StatusCode} for card ending {LastFour}.",
+                (int)response.StatusCode,
+                lastFour);
+
             throw new AcquiringBankUnavailableException();
         }
 
@@ -36,9 +52,16 @@ public class AcquiringBankSimulatorClient(HttpClient httpClient) : IAcquiringBan
         var bankResponse = await response.Content.ReadFromJsonAsync<BankPaymentResponse>(cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException("The acquiring bank returned an invalid response.");
 
-        return bankResponse.Authorized
+        var paymentStatus = bankResponse.Authorized
             ? PaymentStatus.Authorized
             : PaymentStatus.Declined;
+
+        _logger.LogInformation(
+            "Acquiring bank responded with status {PaymentStatus} for card ending {LastFour}.",
+            paymentStatus,
+            lastFour);
+
+        return paymentStatus;
     }
 
     private sealed class BankPaymentRequest

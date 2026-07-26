@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 using PaymentGateway.Api.Application.Abstractions;
 using PaymentGateway.Api.Application.Payments.Commands;
@@ -14,11 +15,16 @@ public class PaymentsController : Controller
 {
     private readonly IPaymentService _paymentService;
     private readonly IPaymentRequestValidator _paymentRequestValidator;
+    private readonly ILogger<PaymentsController> _logger;
 
-    public PaymentsController(IPaymentService paymentService, IPaymentRequestValidator paymentRequestValidator)
+    public PaymentsController(
+        IPaymentService paymentService,
+        IPaymentRequestValidator paymentRequestValidator,
+        ILogger<PaymentsController> logger)
     {
         _paymentService = paymentService;
         _paymentRequestValidator = paymentRequestValidator;
+        _logger = logger;
     }
 
     [HttpPost]
@@ -26,6 +32,11 @@ public class PaymentsController : Controller
         [FromBody] PostPaymentRequest request,
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation(
+            "Processing payment request for amount {Amount} {Currency}.",
+            request.Amount,
+            request.Currency);
+
         var command = new ProcessPaymentCommand
         {
             CardNumber = request.CardNumber,
@@ -40,12 +51,23 @@ public class PaymentsController : Controller
 
         if (!validationResult.IsValid)
         {
+            _logger.LogWarning(
+                "Payment request validation failed with {ErrorCount} validation error fields.",
+                validationResult.Errors.Count);
+
             return BadRequest(new HttpValidationProblemDetails(validationResult.Errors.ToDictionary(
                 error => error.Key,
                 error => error.Value)));
         }
 
         var payment = await _paymentService.ProcessPaymentAsync(command, cancellationToken);
+
+        _logger.LogInformation(
+            "Payment {PaymentId} processed with status {Status} for amount {Amount} {Currency}.",
+            payment.Id,
+            payment.Status,
+            payment.Amount,
+            payment.Currency);
 
         return Ok(new PostPaymentResponse
         {
@@ -62,6 +84,8 @@ public class PaymentsController : Controller
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<GetPaymentResponse>> GetPaymentAsync(Guid id, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Retrieving payment {PaymentId}.", id);
+
         var payment = await _paymentService.GetPaymentAsync(new GetPaymentQuery
         {
             Id = id
@@ -69,8 +93,11 @@ public class PaymentsController : Controller
 
         if (payment is null)
         {
+            _logger.LogWarning("Payment {PaymentId} was not found.", id);
             return NotFound();
         }
+
+        _logger.LogInformation("Payment {PaymentId} retrieved successfully.", id);
 
         return Ok(new GetPaymentResponse
         {

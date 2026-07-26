@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using PaymentGateway.Api.Application.Payments.Commands;
 using PaymentGateway.Api.Infrastructure.Banking;
@@ -79,10 +80,12 @@ public class AcquiringBankSimulatorClientTests
 
     private static AcquiringBankSimulatorClient CreateClient(HttpMessageHandler handler)
     {
-        return new AcquiringBankSimulatorClient(new HttpClient(handler)
-        {
-            BaseAddress = new Uri("http://localhost:8080/")
-        });
+        return new AcquiringBankSimulatorClient(
+            new HttpClient(handler)
+            {
+                BaseAddress = new Uri("http://localhost:8080/")
+            },
+            NullLogger<AcquiringBankSimulatorClient>.Instance);
     }
 
     private static ProcessPaymentCommand CreateRequest()
