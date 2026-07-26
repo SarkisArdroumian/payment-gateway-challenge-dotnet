@@ -11,7 +11,10 @@ public class PaymentsRepository : IPaymentsRepository
 
     public void Add(Payment payment)
     {
-        _payments[payment.Id] = payment;
+        if (!_payments.TryAdd(payment.Id, payment))
+        {
+            throw new DuplicatePaymentIdException(payment.Id);
+        }
     }
 
     public Payment? Get(Guid id)
