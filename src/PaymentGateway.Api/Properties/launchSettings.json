@@ -19,6 +19,17 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
+    "Container (Dockerfile)": {
+      "commandName": "Docker",
+      "launchBrowser": true,
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/swagger",
+      "httpPort": 5067,
+      "useSSL": false,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "AcquiringBank__BaseUrl": "http://host.docker.internal:8080/"
+      }
+    },
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
