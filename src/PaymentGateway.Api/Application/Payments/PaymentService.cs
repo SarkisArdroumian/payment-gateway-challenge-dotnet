@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 using PaymentGateway.Api.Application.Abstractions;
@@ -52,6 +53,15 @@ public class PaymentService : IPaymentService
         var normalizedCurrency = command.Currency.Trim().ToUpperInvariant();
         var lastFour = command.CardNumber[^4..];
         var requestFingerprint = ComputeRequestFingerprint(command, normalizedCurrency);
+
+        using var scope = _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["TraceId"] = Activity.Current?.TraceId.ToString(),
+            ["IdempotencyKey"] = command.IdempotencyKey,
+            ["CardLastFour"] = lastFour,
+            ["Amount"] = command.Amount,
+            ["Currency"] = normalizedCurrency
+        });
 
         _logger.LogInformation(
             "Starting payment processing for amount {Amount} {Currency} with card ending {LastFour}.",

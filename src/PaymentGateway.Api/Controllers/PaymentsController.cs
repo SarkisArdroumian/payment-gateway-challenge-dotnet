@@ -6,6 +6,7 @@ using PaymentGateway.Api.Application.Payments.Commands;
 using PaymentGateway.Api.Application.Payments.Queries;
 using PaymentGateway.Api.Contracts.Requests;
 using PaymentGateway.Api.Contracts.Responses;
+using PaymentGateway.Api.Observability;
 
 namespace PaymentGateway.Api.Controllers;
 
@@ -38,6 +39,17 @@ public class PaymentsController : Controller
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         CancellationToken cancellationToken)
     {
+        using var scope = _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["TraceId"] = HttpContext.TraceIdentifier,
+            ["CorrelationId"] = HttpContext.Items.TryGetValue(CorrelationIdMiddleware.ItemKey, out var correlationId)
+                ? correlationId?.ToString()
+                : null,
+            ["IdempotencyKey"] = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim(),
+            ["Amount"] = request.Amount,
+            ["Currency"] = request.Currency
+        });
+
         _logger.LogInformation(
             "Processing payment request for amount {Amount} {Currency}.",
             request.Amount,
@@ -94,6 +106,15 @@ public class PaymentsController : Controller
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<GetPaymentResponse>> GetPaymentAsync(Guid id, CancellationToken cancellationToken)
     {
+        using var scope = _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["TraceId"] = HttpContext.TraceIdentifier,
+            ["CorrelationId"] = HttpContext.Items.TryGetValue(CorrelationIdMiddleware.ItemKey, out var correlationId)
+                ? correlationId?.ToString()
+                : null,
+            ["PaymentId"] = id
+        });
+
         _logger.LogInformation("Retrieving payment {PaymentId}.", id);
 
         var payment = await _paymentService.GetPaymentAsync(new GetPaymentQuery

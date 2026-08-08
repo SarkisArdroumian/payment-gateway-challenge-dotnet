@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PaymentGateway.Api.Application.Payments;
 using PaymentGateway.Api.Infrastructure.Banking;
+using PaymentGateway.Api.Observability;
 
 namespace PaymentGateway.Api.ExceptionHandling;
 
@@ -19,6 +20,10 @@ public class GlobalExceptionHandler : IExceptionHandler
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var traceId = httpContext.TraceIdentifier;
+
+        var correlationId = httpContext.Items.TryGetValue(CorrelationIdMiddleware.ItemKey, out var correlationIdValue)
+            ? correlationIdValue?.ToString()
+            : null;
 
         var problemDetails = exception switch
         {
@@ -41,13 +46,20 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         problemDetails.Extensions["traceId"] = traceId;
 
+        if (!string.IsNullOrWhiteSpace(correlationId))
+        {
+            httpContext.Response.Headers[CorrelationIdMiddleware.HeaderName] = correlationId;
+            problemDetails.Extensions["correlationId"] = correlationId;
+        }
+
         _logger.LogError(
             exception,
-            "Handling exception for request {Method} {Path}. Responding with status code {StatusCode}. TraceId: {TraceId}",
+            "Handling exception for request {Method} {Path}. Responding with status code {StatusCode}. TraceId: {TraceId}. CorrelationId: {CorrelationId}",
             httpContext.Request.Method,
             httpContext.Request.Path,
             problemDetails.Status ?? StatusCodes.Status500InternalServerError,
-            traceId);
+            traceId,
+            correlationId);
 
         httpContext.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
         httpContext.Response.ContentType = "application/problem+json";

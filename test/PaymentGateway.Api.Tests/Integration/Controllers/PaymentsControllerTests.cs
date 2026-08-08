@@ -96,8 +96,9 @@ public class PaymentsControllerTests
     {
         var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(static (_, _) => throw new AcquiringBankUnavailableException()));
         var request = CreateValidRequest(cardNumber: "42424242424240");
+        const string correlationId = "test-correlation-id";
 
-        var response = await PostPaymentAsync(client, request);
+        var response = await PostPaymentAsync(client, request, correlationId: correlationId);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
@@ -105,6 +106,9 @@ public class PaymentsControllerTests
         Assert.Equal("Acquiring bank unavailable", problemDetails.Title);
         Assert.True(problemDetails.Extensions.TryGetValue("traceId", out var traceId));
         Assert.False(string.IsNullOrWhiteSpace(traceId?.ToString()));
+        Assert.Equal(correlationId, response.Headers.GetValues("X-Correlation-Id").Single());
+        Assert.True(problemDetails.Extensions.TryGetValue("correlationId", out var returnedCorrelationId));
+        Assert.Equal(correlationId, returnedCorrelationId?.ToString());
     }
 
     [Fact]
@@ -121,6 +125,23 @@ public class PaymentsControllerTests
         Assert.Equal("An unexpected error occurred", problemDetails.Title);
         Assert.True(problemDetails.Extensions.TryGetValue("traceId", out var traceId));
         Assert.False(string.IsNullOrWhiteSpace(traceId?.ToString()));
+    }
+
+    [Fact]
+    public async Task ReturnsGeneratedCorrelationIdWhenHeaderIsMissing()
+    {
+        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(static (_, _) => throw new AcquiringBankUnavailableException()));
+        var request = CreateValidRequest();
+
+        var response = await PostPaymentAsync(client, request);
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.True(response.Headers.TryGetValues("X-Correlation-Id", out var correlationHeaderValues));
+        var correlationId = correlationHeaderValues.Single();
+        Assert.False(string.IsNullOrWhiteSpace(correlationId));
+        Assert.NotNull(problemDetails);
+        Assert.True(problemDetails.Extensions.TryGetValue("correlationId", out var returnedCorrelationId));
+        Assert.Equal(correlationId, returnedCorrelationId?.ToString());
     }
 
     [Fact]
@@ -302,7 +323,11 @@ public class PaymentsControllerTests
             .CreateClient();
     }
 
-    private static Task<HttpResponseMessage> PostPaymentAsync(HttpClient client, PostPaymentRequest request, string? idempotencyKey = null)
+    private static Task<HttpResponseMessage> PostPaymentAsync(
+        HttpClient client,
+        PostPaymentRequest request,
+        string? idempotencyKey = null,
+        string? correlationId = null)
     {
         var message = new HttpRequestMessage(HttpMethod.Post, "/api/Payments")
         {
@@ -312,6 +337,11 @@ public class PaymentsControllerTests
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
             message.Headers.Add("Idempotency-Key", idempotencyKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(correlationId))
+        {
+            message.Headers.Add("X-Correlation-Id", correlationId);
         }
 
         return client.SendAsync(message);

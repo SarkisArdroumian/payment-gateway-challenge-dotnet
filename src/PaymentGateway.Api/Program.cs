@@ -3,6 +3,7 @@ using PaymentGateway.Api.Application.Payments;
 using PaymentGateway.Api.ExceptionHandling;
 using PaymentGateway.Api.Infrastructure.Banking;
 using PaymentGateway.Api.Infrastructure.Persistence;
+using PaymentGateway.Api.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
