@@ -25,7 +25,7 @@ public class PaymentsControllerTests
     {
         var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(new AcquiringBankPaymentResult
         {
-            Status = PaymentStatus.Authorized,
+            Status = PaymentStatus.Authorized.ToString(),
             AuthorizationCode = "auth-4241"
         }));
         var request = CreateValidRequest(cardNumber: "42424242424241");
@@ -35,7 +35,7 @@ public class PaymentsControllerTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(paymentResponse);
-        Assert.Equal(PaymentStatus.Authorized, paymentResponse.Status);
+        Assert.Equal(PaymentStatus.Authorized.ToString(), paymentResponse.Status);
         Assert.Equal("auth-4241", paymentResponse.AuthorizationCode);
         Assert.Equal("4241", paymentResponse.LastFour);
         Assert.Equal(request.ExpiryMonth, paymentResponse.ExpiryMonth);
@@ -49,7 +49,7 @@ public class PaymentsControllerTests
     {
         var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(new AcquiringBankPaymentResult
         {
-            Status = PaymentStatus.Declined,
+            Status = PaymentStatus.Declined.ToString(),
             AuthorizationCode = string.Empty
         }));
         var request = CreateValidRequest(cardNumber: "42424242424242");
@@ -59,7 +59,7 @@ public class PaymentsControllerTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(paymentResponse);
-        Assert.Equal(PaymentStatus.Declined, paymentResponse.Status);
+        Assert.Equal(PaymentStatus.Declined.ToString(), paymentResponse.Status);
         Assert.Equal(string.Empty, paymentResponse.AuthorizationCode);
         Assert.Equal("4242", paymentResponse.LastFour);
     }
@@ -113,7 +113,7 @@ public class PaymentsControllerTests
     {
         var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(new AcquiringBankPaymentResult
         {
-            Status = PaymentStatus.Authorized,
+            Status = PaymentStatus.Authorized.ToString(),
             AuthorizationCode = "auth-processed"
         }));
         var request = CreateValidRequest(cardNumber: "42424242424241");
@@ -143,7 +143,7 @@ public class PaymentsControllerTests
         var payment = new Payment
         {
             Id = Guid.NewGuid(),
-            Status = PaymentStatus.Authorized,
+            Status = PaymentStatus.Authorized.ToString(),
             AuthorizationCode = "auth-existing",
             ExpiryYear = _random.Next(2023, 2030),
             ExpiryMonth = _random.Next(1, 12),

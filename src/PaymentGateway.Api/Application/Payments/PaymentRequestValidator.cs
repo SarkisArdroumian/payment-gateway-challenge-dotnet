@@ -58,6 +58,12 @@ public class PaymentRequestValidator : IPaymentRequestValidator
             return;
         }
 
+        if (expiryYear > 9999)
+        {
+            AddError(errors, nameof(ProcessPaymentCommand.ExpiryYear), "Expiry year must be less than 9999.");
+            return;
+        }
+
         var now = DateTime.UtcNow;
         var lastValidDate = new DateTime(expiryYear, expiryMonth, DateTime.DaysInMonth(expiryYear, expiryMonth));
 

@@ -53,9 +53,9 @@ public class AcquiringBankSimulatorClient(HttpClient httpClient, ILogger<Acquiri
         var bankResponse = await response.Content.ReadFromJsonAsync<BankPaymentResponse>(cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException("The acquiring bank returned an invalid response.");
 
-        var paymentStatus = bankResponse.Authorized
-            ? PaymentStatus.Authorized
-            : PaymentStatus.Declined;
+        string paymentStatus = bankResponse.Authorized
+            ? PaymentStatus.Authorized.ToString()
+            : PaymentStatus.Declined.ToString();
 
         _logger.LogInformation(
             "Acquiring bank responded with status {PaymentStatus} for card ending {LastFour}.",

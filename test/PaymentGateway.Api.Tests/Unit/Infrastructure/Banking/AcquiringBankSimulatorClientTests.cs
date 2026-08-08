@@ -40,7 +40,7 @@ public class AcquiringBankSimulatorClientTests
             Cvv = "123"
         });
 
-        Assert.Equal(PaymentStatus.Authorized, result.Status);
+        Assert.Equal(PaymentStatus.Authorized.ToString(), result.Status);
         Assert.Equal(authorizationCode, result.AuthorizationCode);
         Assert.NotNull(capturedRequest);
         Assert.Equal(HttpMethod.Post, capturedRequest.Method);
@@ -69,7 +69,7 @@ public class AcquiringBankSimulatorClientTests
 
         var result = await client.ProcessPaymentAsync(CreateRequest());
 
-        Assert.Equal(PaymentStatus.Declined, result.Status);
+        Assert.Equal(PaymentStatus.Declined.ToString(), result.Status);
         Assert.Equal(string.Empty, result.AuthorizationCode);
     }
 

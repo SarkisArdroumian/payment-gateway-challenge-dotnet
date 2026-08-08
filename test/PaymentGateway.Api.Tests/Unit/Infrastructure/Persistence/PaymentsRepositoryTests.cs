@@ -12,7 +12,7 @@ public class PaymentsRepositoryTests
         var payment = new Payment
         {
             Id = Guid.NewGuid(),
-            Status = PaymentStatus.Authorized,
+            Status = PaymentStatus.Authorized.ToString(),
             AuthorizationCode = "auth-123",
             LastFour = "4242",
             ExpiryMonth = 12,
@@ -45,7 +45,7 @@ public class PaymentsRepositoryTests
         repository.Add(new Payment
         {
             Id = id,
-            Status = PaymentStatus.Authorized,
+            Status = PaymentStatus.Authorized.ToString(),
             AuthorizationCode = "auth-1",
             LastFour = "4241",
             ExpiryMonth = 12,
@@ -57,7 +57,7 @@ public class PaymentsRepositoryTests
         var duplicatePayment = new Payment
         {
             Id = id,
-            Status = PaymentStatus.Declined,
+            Status = PaymentStatus.Declined.ToString(),
             AuthorizationCode = string.Empty,
             LastFour = "4242",
             ExpiryMonth = 11,
