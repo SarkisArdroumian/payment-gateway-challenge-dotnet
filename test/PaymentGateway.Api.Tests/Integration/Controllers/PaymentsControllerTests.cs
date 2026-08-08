@@ -145,6 +145,16 @@ public class PaymentsControllerTests
     }
 
     [Fact]
+    public async Task HealthEndpointReturnsOk()
+    {
+        var client = CreateClient();
+
+        var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task RetrievesProcessedPaymentSuccessfully()
     {
         var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(new AcquiringBankPaymentResult
