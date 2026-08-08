@@ -11,6 +11,7 @@ public class PaymentRequestValidator : IPaymentRequestValidator
     {
         Dictionary<string, List<string>> errors = new();
 
+        ValidateIdempotencyKey(command.IdempotencyKey, errors);
         ValidateCardNumber(command.CardNumber, errors);
         ValidateExpiryDate(command.ExpiryMonth, command.ExpiryYear, errors);
         ValidateCurrency(command.Currency, errors);
@@ -23,6 +24,19 @@ public class PaymentRequestValidator : IPaymentRequestValidator
                 error => error.Key,
                 error => error.Value.ToArray())
         };
+    }
+
+    private static void ValidateIdempotencyKey(string? idempotencyKey, Dictionary<string, List<string>> errors)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            return;
+        }
+
+        if (!Guid.TryParse(idempotencyKey, out _))
+        {
+            AddError(errors, nameof(ProcessPaymentCommand.IdempotencyKey), "Idempotency key must be a valid GUID.");
+        }
     }
 
     private static void ValidateCardNumber(string cardNumber, Dictionary<string, List<string>> errors)

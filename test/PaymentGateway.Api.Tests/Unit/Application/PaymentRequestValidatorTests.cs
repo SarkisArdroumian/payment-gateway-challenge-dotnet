@@ -80,6 +80,18 @@ public class PaymentRequestValidatorTests
         Assert.Contains(nameof(ProcessPaymentCommand.Cvv), result.Errors.Keys);
     }
 
+    [Fact]
+    public void InvalidIdempotencyKeyReturnsValidationError()
+    {
+        var request = CreateValidRequest();
+        request.IdempotencyKey = "not-a-guid";
+
+        var result = _validator.Validate(request);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(nameof(ProcessPaymentCommand.IdempotencyKey), result.Errors.Keys);
+    }
+
     private static ProcessPaymentCommand CreateValidRequest()
     {
         var expiryDate = DateTime.UtcNow.AddMonths(1);

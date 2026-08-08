@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using PaymentGateway.Api.Application.Payments;
 using PaymentGateway.Api.Infrastructure.Banking;
 
 namespace PaymentGateway.Api.ExceptionHandling;
@@ -21,6 +22,11 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         var problemDetails = exception switch
         {
+            IdempotencyConflictException => new ProblemDetails
+            {
+                Title = "Idempotency key conflict",
+                Status = StatusCodes.Status409Conflict
+            },
             AcquiringBankUnavailableException => new ProblemDetails
             {
                 Title = "Acquiring bank unavailable",

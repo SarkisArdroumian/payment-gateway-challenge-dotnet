@@ -16,6 +16,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<IPaymentsRepository, PaymentsRepository>();
+builder.Services.AddSingleton<IIdempotencyRepository, IdempotencyRepository>();
 builder.Services.AddSingleton<IPaymentRequestValidator, PaymentRequestValidator>();
 builder.Services.AddHttpClient<IAcquiringBankClient, AcquiringBankSimulatorClient>(client =>
 {

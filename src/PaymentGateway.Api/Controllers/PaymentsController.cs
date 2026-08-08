@@ -30,10 +30,12 @@ public class PaymentsController : Controller
     [HttpPost]
     [ProducesResponseType(typeof(PostPaymentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PostPaymentResponse>> PostPaymentAsync(
         [FromBody] PostPaymentRequest request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
@@ -43,6 +45,7 @@ public class PaymentsController : Controller
 
         var command = new ProcessPaymentCommand
         {
+            IdempotencyKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim(),
             CardNumber = request.CardNumber,
             ExpiryMonth = request.ExpiryMonth,
             ExpiryYear = request.ExpiryYear,

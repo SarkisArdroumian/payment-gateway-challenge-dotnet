@@ -2,6 +2,7 @@ namespace PaymentGateway.Api.Application.Payments.Commands;
 
 public class ProcessPaymentCommand
 {
+    public string? IdempotencyKey { get; set; }
     public string CardNumber { get; set; } = string.Empty;
     public int ExpiryMonth { get; set; }
     public int ExpiryYear { get; set; }

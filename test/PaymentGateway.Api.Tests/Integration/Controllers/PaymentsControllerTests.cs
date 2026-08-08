@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +31,7 @@ public class PaymentsControllerTests
         }));
         var request = CreateValidRequest(cardNumber: "42424242424241");
 
-        var response = await client.PostAsJsonAsync("/api/Payments", request);
+        var response = await PostPaymentAsync(client, request);
         var paymentResponse = await response.Content.ReadFromJsonAsync<PostPaymentResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -54,7 +55,7 @@ public class PaymentsControllerTests
         }));
         var request = CreateValidRequest(cardNumber: "42424242424242");
 
-        var response = await client.PostAsJsonAsync("/api/Payments", request);
+        var response = await PostPaymentAsync(client, request);
         var paymentResponse = await response.Content.ReadFromJsonAsync<PostPaymentResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -71,9 +72,23 @@ public class PaymentsControllerTests
         var request = CreateValidRequest();
         request.CardNumber = "123";
 
-        var response = await client.PostAsJsonAsync("/api/Payments", request);
+        var response = await PostPaymentAsync(client, request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Returns400ForInvalidIdempotencyKey()
+    {
+        var client = CreateClient();
+        var request = CreateValidRequest();
+
+        var response = await PostPaymentAsync(client, request, "not-a-guid");
+        var validationProblem = await response.Content.ReadFromJsonAsync<HttpValidationProblemDetails>();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(validationProblem);
+        Assert.True(validationProblem.Errors.ContainsKey(nameof(ProcessPaymentCommand.IdempotencyKey)));
     }
 
     [Fact]
@@ -82,7 +97,7 @@ public class PaymentsControllerTests
         var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(static (_, _) => throw new AcquiringBankUnavailableException()));
         var request = CreateValidRequest(cardNumber: "42424242424240");
 
-        var response = await client.PostAsJsonAsync("/api/Payments", request);
+        var response = await PostPaymentAsync(client, request);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
@@ -98,7 +113,7 @@ public class PaymentsControllerTests
         var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient(static (_, _) => throw new InvalidOperationException("Unexpected failure")));
         var request = CreateValidRequest();
 
-        var response = await client.PostAsJsonAsync("/api/Payments", request);
+        var response = await PostPaymentAsync(client, request);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -118,7 +133,7 @@ public class PaymentsControllerTests
         }));
         var request = CreateValidRequest(cardNumber: "42424242424241");
 
-        var postResponse = await client.PostAsJsonAsync("/api/Payments", request);
+        var postResponse = await PostPaymentAsync(client, request);
         var createdPayment = await postResponse.Content.ReadFromJsonAsync<PostPaymentResponse>();
 
         var getResponse = await client.GetAsync($"/api/Payments/{createdPayment!.Id}");
@@ -187,6 +202,69 @@ public class PaymentsControllerTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task ReturnsExistingPaymentForRepeatedRequestWithSameIdempotencyKey()
+    {
+        var bankCalls = 0;
+        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient((_, _) =>
+        {
+            bankCalls++;
+
+            return Task.FromResult(new AcquiringBankPaymentResult
+            {
+                Status = PaymentStatus.Authorized.ToString(),
+                AuthorizationCode = "auth-idempotent"
+            });
+        }));
+        var request = CreateValidRequest();
+        var idempotencyKey = Guid.NewGuid().ToString();
+
+        var firstResponse = await PostPaymentAsync(client, request, idempotencyKey);
+        var secondResponse = await PostPaymentAsync(client, request, idempotencyKey);
+        var firstPayment = await firstResponse.Content.ReadFromJsonAsync<PostPaymentResponse>();
+        var secondPayment = await secondResponse.Content.ReadFromJsonAsync<PostPaymentResponse>();
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        Assert.NotNull(firstPayment);
+        Assert.NotNull(secondPayment);
+        Assert.Equal(firstPayment.Id, secondPayment.Id);
+        Assert.Equal(firstPayment.AuthorizationCode, secondPayment.AuthorizationCode);
+        Assert.Equal(firstPayment.Status, secondPayment.Status);
+        Assert.Equal(1, bankCalls);
+    }
+
+    [Fact]
+    public async Task Returns409WhenIdempotencyKeyIsReusedWithDifferentRequest()
+    {
+        var bankCalls = 0;
+        var client = CreateClient(acquiringBankClient: new FakeAcquiringBankClient((_, _) =>
+        {
+            bankCalls++;
+
+            return Task.FromResult(new AcquiringBankPaymentResult
+            {
+                Status = PaymentStatus.Authorized.ToString(),
+                AuthorizationCode = "auth-conflict"
+            });
+        }));
+        var idempotencyKey = Guid.NewGuid().ToString();
+
+        var firstRequest = CreateValidRequest();
+        var secondRequest = CreateValidRequest();
+        secondRequest.Amount = 200;
+
+        var firstResponse = await PostPaymentAsync(client, firstRequest, idempotencyKey);
+        var secondResponse = await PostPaymentAsync(client, secondRequest, idempotencyKey);
+        var problemDetails = await secondResponse.Content.ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
+        Assert.NotNull(problemDetails);
+        Assert.Equal("Idempotency key conflict", problemDetails.Title);
+        Assert.Equal(1, bankCalls);
+    }
+
     private static PostPaymentRequest CreateValidRequest(string cardNumber = "42424242424241")
     {
         var expiryDate = DateTime.UtcNow.AddMonths(1);
@@ -222,6 +300,21 @@ public class PaymentsControllerTests
                 }
             }))
             .CreateClient();
+    }
+
+    private static Task<HttpResponseMessage> PostPaymentAsync(HttpClient client, PostPaymentRequest request, string? idempotencyKey = null)
+    {
+        var message = new HttpRequestMessage(HttpMethod.Post, "/api/Payments")
+        {
+            Content = JsonContent.Create(request)
+        };
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            message.Headers.Add("Idempotency-Key", idempotencyKey);
+        }
+
+        return client.SendAsync(message);
     }
 
     private sealed class FakeAcquiringBankClient : IAcquiringBankClient
